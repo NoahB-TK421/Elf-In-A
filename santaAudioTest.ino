@@ -4,13 +4,20 @@
 
 const int buttonPin = 0;  
 const int buttonPin1 = 1;
+const int buttonPin2 = 2;
+const int buttonPin3 = 3;
+const int buttonPin4 = 4;
 int buttonState;
 int count = 0;
+int songIndex = 0;
 
 void setup()
 {
 
   pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(buttonPin2, OUTPUT);
+  pinMode(buttonPin3, OUTPUT);
+  pinMode(buttonPin4, OUTPUT);
 
   if (!SD.begin(SDCARD_SS_PIN)) {
 
@@ -88,48 +95,24 @@ while(count == 0){
 
  }
 
-  switch (digitalRead(buttonPin)) {
-    case LOW:
-      playAudio(buttonPin, myFile);
-      break;
-    case HIGH:
-      // Check the second buttonPin
-      switch (digitalRead(buttonPin1)) {
-        case LOW:
-          playAudio(buttonPin1, myFile1);
-          break;
-        case HIGH:
-          // Check both buttons
-          if (digitalRead(buttonPin) == HIGH && digitalRead(buttonPin1) == HIGH) {
-            // until the file is not finished
-            AudioZero.play(myFile2);
-            digitalWrite(LED_BUILTIN, HIGH);  // turn the LED on (HIGH is the voltage level)
-            delay(500);                      // wait
-            digitalWrite(LED_BUILTIN, LOW);   // turn the LED off by making the voltage LOW
-            delay(500);
-          }
-          break;
-      }
-      break;
+  if (digitalRead(buttonPin) == LOW){
+    // until the file is not finished
+    digitalWrite(buttonPin2, HIGH);
+    AudioZero.play(myFile);
+    digitalWrite(buttonPin2, LOW);
   }
-}
 
-  //if (digitalRead(buttonPin) == LOW){
-  //  // until the file is not finished
-  //  AudioZero.play(myFile);
-  //}
-//
-  //if (digitalRead(buttonPin1) == LOW){
-  //  // until the file is not finished
-  //  AudioZero.play(myFile1);
-  //}
-//
-  //if (digitalRead(buttonPin && buttonPin1) == HIGH){
-  //  // until the file is not finished
-  //  AudioZero.play(myFile2);
-  //  digitalWrite(LED_BUILTIN, HIGH);  // turn the LED on (HIGH is the voltage level)
-  //  delay(500);                      // wait
-  //  digitalWrite(LED_BUILTIN, LOW);   // turn the LED off by making the voltage LOW
-  //  delay(500);
-  //}
+  if (digitalRead(buttonPin1) == LOW){
+    // until the file is not finished
+    digitalWrite(buttonPin3, HIGH);
+    AudioZero.play(myFile1);
+    digitalWrite(buttonPin3, LOW);
   }
+
+  if (digitalRead(buttonPin && buttonPin1) == HIGH){
+    // until the file is not finished
+    digitalWrite(buttonPin4, HIGH);
+    AudioZero.play(myFile2);
+    digitalWrite(buttonPin4, LOW);
+  }
+}}
