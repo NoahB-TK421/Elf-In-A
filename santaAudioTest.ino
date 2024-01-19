@@ -2,7 +2,8 @@
 
 Created by Noah Brown 1/1/2024
 
-This code plays sound files for a prop phone for Santa. The product is still in development and will be updated as need  
+This code plays sound files for a prop phone for Santa. 
+The product is still in development and will be updated as need  
 
 */
 
@@ -44,7 +45,7 @@ void setup()
 
   // 44100kHz stereo => 88200 sample rate
 
-  AudioZero.begin(2*44100);
+  //AudioZero.begin(2*44100);
   
 }
 
@@ -67,39 +68,47 @@ void checkFile(File tempFile, int delayTime){
 
 void loop()
 {
-while(count == 0){
 
-  // open wave file from sdcard
-  File myFile = SD.open("test.wav");
-  File myFile1 = SD.open("r2d2.wav");
-  File myFile2 = SD.open("quit.wav");
+  
+  while(count == 0){
 
-  //Array containing all files expected to be played
-  File myFiles[] = {myFile,myFile1,myFile2};
+    // open wave file from sdcard
+    File myFile = SD.open("test.wav");
+    File myFile1 = SD.open("r2d2.wav");
+    File myFile2 = SD.open("quit.wav");
+    
+    //Array containing all files expected to be played
+    File myFiles[] = {myFile,myFile1,myFile2};
+    
+    //Checkes if all files are ready to be played
+    for (int i = 0; i<=2; i++){
+      checkFile(myFiles[i],i+1);
+    }
 
-  //Checkes if all files are ready to be played
-  for (int i = 0; i<=2; i++){
-    checkFile(myFiles[i],i+1);
+    if (digitalRead(buttonPin) == LOW){
+      // until the file is not finished
+      AudioZero.begin(2*44100);
+      digitalWrite(LEDPin1, HIGH);
+      AudioZero.play(myFile);
+      AudioZero.end();
+      digitalWrite(LEDPin1, LOW);
+    }
+
+    if (digitalRead(buttonPin1) == LOW){
+      // until the file is not finished
+      AudioZero.begin(2*44100);
+      digitalWrite(LEDPin2, HIGH);
+      AudioZero.play(myFile1);
+      AudioZero.end();
+      digitalWrite(LEDPin2, LOW);
+    }
+
+    if (digitalRead(buttonPin && buttonPin1) == HIGH){
+      // until the file is not finished
+      digitalWrite(LEDPin3, HIGH);
+      //AudioZero.play(myFile2);
+      delay(500);
+      digitalWrite(LEDPin3, LOW);
+    }
   }
-
-  if (digitalRead(buttonPin) == LOW){
-    // until the file is not finished
-    digitalWrite(LEDPin1, HIGH);
-    AudioZero.play(myFile);
-    digitalWrite(LEDPin1, LOW);
-  }
-
-  if (digitalRead(buttonPin1) == LOW){
-    // until the file is not finished
-    digitalWrite(LEDPin2, HIGH);
-    AudioZero.play(myFile1);
-    digitalWrite(LEDPin2, LOW);
-  }
-
-  if (digitalRead(buttonPin && buttonPin1) == HIGH){
-    // until the file is not finished
-    digitalWrite(LEDPin3, HIGH);
-    AudioZero.play(myFile2);
-    digitalWrite(LEDPin3, LOW);
-  }
-}}
+}
