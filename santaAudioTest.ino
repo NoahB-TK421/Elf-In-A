@@ -13,13 +13,16 @@ The product is still in development and will be updated as need
 
 const int buttonPin = 0;  
 const int buttonPin1 = 1;
-const int LEDPin1 = 2;
-const int LEDPin2 = 3;
-const int LEDPin3 = 4;
+const int buttonPin2 = 2;
+const int LEDPin1 = 3;
+const int LEDPin2 = 4;
+const int LEDPin3 = 5;
 int buttonState;
 int count = 0;
 int songIndex = 0;
-
+int fileCount = 0;
+String fileNames[0];
+File myFiles[0];
 
 void setup()
 {
@@ -49,6 +52,36 @@ void setup()
   
 }
 
+void readSDCard() {
+  File root = SD.open("/"); // Open the root directory
+    
+  while (true) {
+    File entry = root.openNextFile(); // Open the next file in root directory
+    
+    // If no more files, break the loop
+    if (!entry) {
+      Serial.println("End of files.");
+      break;
+    }
+    
+    // Check if the entry is a file
+    if (!entry.isDirectory()) {
+      // Get the file name and store it in the array
+      fileNames[fileCount] = entry.name();
+      Serial.print("File ");
+      Serial.print(fileCount);
+      Serial.print(": ");
+      Serial.println(fileNames[fileCount]);
+      
+      fileCount++; // Increment file count
+    }
+    
+    entry.close(); // Close the file
+  }
+  
+  root.close(); // Close the root directory
+}
+
 //Checks to see if file has been correctly opened and porvides a unique error code on the built in LED
 void checkFile(File tempFile, int delayTime){
 
@@ -66,44 +99,49 @@ void checkFile(File tempFile, int delayTime){
   }
 }
 
+//Opens all available files on SD card then checks that all the files are ready to use
+void openFiles(){
+  for(int i = 0; i <= fileCount; i++){
+    myFiles[i] = SD.open(fileNames[i]);
+  }
+  for (int i = 0; i<= fileCount; i++){
+    checkFile(myFiles[i],i+1);
+  }
+
+}
+
 void loop()
 {
 
   
   while(count == 0){
 
-    // open wave file from sdcard
-    File myFile = SD.open("test.wav");
-    File myFile1 = SD.open("r2d2.wav");
-    File myFile2 = SD.open("quit.wav");
-    
-    //Array containing all files expected to be played
-    File myFiles[] = {myFile,myFile1,myFile2};
-    
-    //Checkes if all files are ready to be played
-    for (int i = 0; i<=2; i++){
-      checkFile(myFiles[i],i+1);
-    }
+    openFiles();
 
+    int currentFile = 0;
+
+    //increment current file ready to be played 
     if (digitalRead(buttonPin) == LOW){
-      // until the file is not finished
-      AudioZero.begin(2*44100);
-      digitalWrite(LEDPin1, HIGH);
-      AudioZero.play(myFile);
-      AudioZero.end();
-      digitalWrite(LEDPin1, LOW);
+      currentFile++;
     }
 
+    //decrement current file ready to be played 
     if (digitalRead(buttonPin1) == LOW){
+      currentFile--;
+    }
+
+    //Plays current file until file is finished playing
+    if (digitalRead(buttonPin2) == LOW){
       // until the file is not finished
       AudioZero.begin(2*44100);
       digitalWrite(LEDPin2, HIGH);
-      AudioZero.play(myFile1);
+      AudioZero.play(myFiles[currentFile]);
       AudioZero.end();
       digitalWrite(LEDPin2, LOW);
     }
 
-    if (digitalRead(buttonPin && buttonPin1) == HIGH){
+    //state to 
+    if (digitalRead(buttonPin && buttonPin1 && buttonPin2) == HIGH){
       // until the file is not finished
       digitalWrite(LEDPin3, HIGH);
       //AudioZero.play(myFile2);
