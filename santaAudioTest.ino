@@ -11,6 +11,8 @@ The product is still in development and will be updated as need
 #include <SPI.h>
 #include <AudioZero.h>
 
+
+//Global variables
 const int buttonPin = 0;  
 const int buttonPin1 = 1;
 const int buttonPin2 = 2;
@@ -23,8 +25,9 @@ int songIndex = 0;
 int fileCount = 0;
 const int maxFiles = 9;
 String fileNames[maxFiles];
-File myFiles[maxFiles];
+File myFile;
 
+// Setup function - Initializes pins and checks SD card
 void setup()
 {
   unsigned long startTime = millis();  // Get the current time in milliseconds
@@ -37,7 +40,7 @@ void setup()
   pinMode(buttonPin1, INPUT_PULLUP);
   pinMode(buttonPin2, INPUT_PULLUP);
 
-  //Check to see if the SD card is readable
+  //Check to see if the SD card is readable function will time out after 10 seconds
   while (!SD.begin(SDCARD_SS_PIN)) {
 
     digitalWrite(LED_BUILTIN, HIGH);  // turn the LED on (HIGH is the voltage level)
@@ -45,7 +48,7 @@ void setup()
     digitalWrite(LED_BUILTIN, LOW);   // turn the LED off by making the voltage LOW
     delay(500);
     
-    if (millis() - startTime > 5000) {
+    if (millis() - startTime > 10000) {
       // Handle timeout here 
       breathBuiltInLED(1);
       return;  // Exit the setup function
@@ -57,6 +60,7 @@ void setup()
   
 }
 
+// Function to simulate breathing effect on built-in LED
 void breathBuiltInLED(int num){
 
   for(int j = 0; j <= num; j++){
@@ -76,6 +80,7 @@ void breathBuiltInLED(int num){
 
 }
 
+// Function to flash built-in LED
 void flashBuiltInLED(int num){
   for(int i = 0; i<= num; i++){
     digitalWrite(LED_BUILTIN, HIGH);  // turn the LED on (HIGH is the voltage level)
@@ -85,7 +90,9 @@ void flashBuiltInLED(int num){
   } 
 } 
 
-//Checks to see if file has been correctly opened and provides a unique error code on the built in LED
+/*Checks to see if file has been correctly opened and provides a unique error code on the built in LED
+function will time out 5 seconds after the the first error code is shown
+*/
 void checkFile(File tempFile, int delayTime){
   unsigned long startTime = millis();  // Get the current time in milliseconds
 
@@ -129,36 +136,27 @@ void readCSVFile(){
       valueStr = "";
       flashBuiltInLED(1);
     } else if (c == '\n') {
+      // Found a end of line, process the value before it
+      fileNames[fileCount] = valueStr;
+      // Clear valueStr for to save memory
+      valueStr = "";
+      flashBuiltInLED(1);
       break;
     } else {
       // Append the character to valueStr
       valueStr += c;
     }
   }
-
+  dataFile.close();
 }
 
-//Opens all available files on SD card populating an array for later use
-//then checks that all the files are ready to use
-
-/*
-readCVSFile();
-
-open file ( input fileName[currnetFile]){
-  currentFile.open();
-
-
-}
-*/
-
-void openFiles(string tempString){
-  for(int i = 0; i < fileCount; i++){
-    myFiles[i] = SD.open(fileNames[i]);
-  }
-  //flashBuiltInLED(2);
-  for (int i = 0; i < fileCount; i++){
-    checkFile(myFiles[i],i+1);
-  }
+//Opens available file on SD card 
+//then checks that the file is ready to use
+void openFile(String tempString){
+  myFile.close();
+  myFile = SD.open(tempString);
+  flashBuiltInLED(2);
+  checkFile(myFile,1);
   breathBuiltInLED(1);
 }
 
@@ -168,15 +166,18 @@ void loop()
   readCSVFile();
 
   int currentFile = 0;
+
+  openFile(fileNames[currentFile]);
   
   while(count == 0){
-
-
+    //check that the file is always available
+    checkFile(myFile,1);
     //increment current file ready to be played 
     if (digitalRead(buttonPin) == LOW){
       //digitalWrite(LEDPin3, LOW);
       digitalWrite(LEDPin1, HIGH);
       currentFile++;
+      openFile(fileNames[currentFile]);
       digitalWrite(LEDPin1, LOW);
     }
 
@@ -185,6 +186,7 @@ void loop()
       //digitalWrite(LEDPin3, LOW);
       digitalWrite(LEDPin1, HIGH);
       currentFile--;
+      openFile(fileNames[currentFile]);
       digitalWrite(LEDPin1, LOW);
     }
 
@@ -196,9 +198,8 @@ void loop()
 
       AudioZero.begin(2*44100);
       digitalWrite(LEDPin2, HIGH);
-      AudioZero.play(myFiles[currentFile]);
+      AudioZero.play(myFile);
       AudioZero.end();
-
       digitalWrite(LEDPin2, LOW);
     }
 
