@@ -25,12 +25,11 @@ int songIndex = 0;
 int fileCount = 0;
 const int maxFiles = 9;
 String fileNames[maxFiles];
-File myFile;
+File myFile, errorLog;
 
 // Setup function - Initializes pins and checks SD card
 void setup()
 {
-  unsigned long startTime = millis();  // Get the current time in milliseconds
   //sets all pins to input/output
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(LEDPin1, OUTPUT);
@@ -40,22 +39,49 @@ void setup()
   pinMode(buttonPin1, INPUT_PULLUP);
   pinMode(buttonPin2, INPUT_PULLUP);
 
+
+  unsigned long startTime = millis();  // Get the current time in milliseconds
+
   //Check to see if the SD card is readable function will time out after 10 seconds
   while (!SD.begin(SDCARD_SS_PIN)) {
+    //unsigned long startTime = millis();  // Get the current time in milliseconds
+
+    SD.begin(SDCARD_SS_PIN); //retry initialization
 
     digitalWrite(LED_BUILTIN, HIGH);  // turn the LED on (HIGH is the voltage level)
-    delay(5000);                      // wait
-    digitalWrite(LED_BUILTIN, LOW);   // turn the LED off by making the voltage LOW
-    delay(500);
-    
-    if (millis() - startTime > 10000) {
-      // Handle timeout here 
-      breathBuiltInLED(1);
+    delay(50);
+
+    if (millis() - startTime > 10000) { //wait 10 seconds before timeing out
+      
+      //breathBuiltInLED(1);
+      writeErrorToLog("Error initializing SD card");
+      digitalWrite(LED_BUILTIN, LOW);   // turn the LED off by making the voltage LOW
       return;  // Exit the setup function
     }
 
   }
 
+  // Open error log file
+  errorLog = SD.open("error.log", FILE_WRITE);
+  startTime = millis();  // Get the current time in milliseconds
+
+  while (!errorLog) {
+    //unsigned long startTime = millis();  // Get the current time in milliseconds
+    // Error opening error log file
+    
+    errorLog = SD.open("error.log", FILE_WRITE); //retry opening file
+
+    digitalWrite(LED_BUILTIN, HIGH);  // turn the LED on (HIGH is the voltage level)
+    delay(50);
+
+    if (millis() - startTime > 10000) {
+      digitalWrite(LED_BUILTIN, LOW);   // turn the LED off by making the voltage LOW
+
+      //breathBuiltInLED(1);
+      return;  // Exit the setup function
+    }
+  }
+  writeErrorToLog("start of program");
   //AudioZero.begin(2*44100);
   
 }
@@ -84,14 +110,21 @@ void breathBuiltInLED(int num){
 void flashBuiltInLED(int num){
   for(int i = 0; i<= num; i++){
     digitalWrite(LED_BUILTIN, HIGH);  // turn the LED on (HIGH is the voltage level)
-    delay(500);                      // wait
+    delay(250);                      // wait
     digitalWrite(LED_BUILTIN, LOW);   // turn the LED off by making the voltage LOW
-    delay(500);
+    delay(250);
   } 
 } 
 
+void writeErrorToLog(String errorMessage) {
+  if (errorLog) {
+    errorLog.println(errorMessage);
+    errorLog.flush(); // Ensure data is written to the file
+  }
+}
+
 /*Checks to see if file has been correctly opened and provides a unique error code on the built in LED
-function will time out 5 seconds after the the first error code is shown
+function will time out after the the first error code is shown
 */
 void checkFile(File tempFile, int delayTime){
   unsigned long startTime = millis();  // Get the current time in milliseconds
@@ -100,13 +133,14 @@ void checkFile(File tempFile, int delayTime){
   while (!tempFile) {
     // if the file didn't open, print an error and stop
     digitalWrite(LED_BUILTIN, HIGH);  // turn the LED on (HIGH is the voltage level)
-    delay(delayTime*1000);                      // wait 
+    delay(delayTime*250);                      // wait 
     digitalWrite(LED_BUILTIN, LOW);   // turn the LED off by making the voltage LOW
-    delay(1000);
+    delay(250);
 
-    if (millis() - startTime > (5+delayTime)*1000) {
+    if (millis() - startTime > (1+delayTime)*250) {
       // Handle timeout here
-      breathBuiltInLED(1);
+      //breathBuiltInLED(1);
+      writeErrorToLog(String(tempFile.name()) + " did not open");
       return;  // Exit the function
     }
   }
@@ -120,6 +154,7 @@ void readCSVFile(){
   
   if (!dataFile) {
     breathBuiltInLED(2);
+    writeErrorToLog(String(dataFile.name()) + " is not open");
     return;
   }
 
@@ -152,11 +187,10 @@ void readCSVFile(){
 
 //Opens available file on SD card 
 //then checks that the file is ready to use
-void openFile(String tempString){
+void openFile(String tempString, int tempCurrentFile){
   myFile.close();
   myFile = SD.open(tempString);
-  flashBuiltInLED(2);
-  checkFile(myFile,1);
+  checkFile(myFile,tempCurrentFile);
   breathBuiltInLED(1);
 }
 
@@ -167,39 +201,44 @@ void loop()
 
   int currentFile = 0;
 
-  openFile(fileNames[currentFile]);
+  openFile(fileNames[currentFile], currentFile);
   
   while(count == 0){
     //check that the file is always available
-    checkFile(myFile,1);
+    checkFile(myFile,currentFile);
     //increment current file ready to be played 
     if (digitalRead(buttonPin) == LOW){
-      //digitalWrite(LEDPin3, LOW);
+
       digitalWrite(LEDPin1, HIGH);
-      currentFile++;
-      openFile(fileNames[currentFile]);
+      if(currentFile < fileCount){
+        currentFile++;
+        openFile(fileNames[currentFile],currentFile);
+      }
       digitalWrite(LEDPin1, LOW);
     }
 
     //decrement current file ready to be played 
     if (digitalRead(buttonPin1) == LOW){
-      //digitalWrite(LEDPin3, LOW);
+
       digitalWrite(LEDPin1, HIGH);
-      currentFile--;
-      openFile(fileNames[currentFile]);
+      if(currentFile > 0){
+        currentFile--;
+        openFile(fileNames[currentFile],currentFile);
+      }
       digitalWrite(LEDPin1, LOW);
     }
 
     //Plays current file until file is finished playing
     if (digitalRead(buttonPin2) == LOW){
       // until the file is not finished
-      //digitalWrite(LEDPin3, LOW);
+
       // 44100kHz stereo => 88200 sample rate
 
       AudioZero.begin(2*44100);
       digitalWrite(LEDPin2, HIGH);
       AudioZero.play(myFile);
       AudioZero.end();
+      openFile(fileNames[currentFile],currentFile);
       digitalWrite(LEDPin2, LOW);
     }
 
@@ -207,7 +246,6 @@ void loop()
     if (digitalRead(buttonPin2) != LOW){
       // until the file is not finished
       digitalWrite(LEDPin3, HIGH);
-      //AudioZero.play(myFile2);
       delay(50);
       digitalWrite(LEDPin3, LOW);
     }
