@@ -53,7 +53,7 @@ void setup()
 
     if (millis() - startTime > 10000) { //wait 10 seconds before timeing out
       
-      //breathBuiltInLED(1);
+      // flashBuiltInLED(1);
       writeErrorToLog("Error initializing SD card");
       digitalWrite(LED_BUILTIN, LOW);   // turn the LED off by making the voltage LOW
       return;  // Exit the setup function
@@ -77,7 +77,7 @@ void setup()
     if (millis() - startTime > 10000) {
       digitalWrite(LED_BUILTIN, LOW);   // turn the LED off by making the voltage LOW
 
-      //breathBuiltInLED(1);
+      // flashBuiltInLED(1);
       return;  // Exit the setup function
     }
   }
@@ -86,33 +86,13 @@ void setup()
   
 }
 
-// Function to simulate breathing effect on built-in LED
-void breathBuiltInLED(int num){
-
-  for(int j = 0; j <= num; j++){
-    //breath in
-    for (int brightness = 0; brightness <= 255; brightness++) {
-    analogWrite(LED_BUILTIN, brightness); // Set the LED brightness
-    delay(10); // Adjust the speed of the breathing effect by changing the delay time
-    }
-
-    // Breathe out
-    for (int brightness = 255; brightness >= 0; brightness--) {
-      analogWrite(LED_BUILTIN, brightness); // Set the LED brightness
-      delay(10); // Adjust the speed of the breathing effect by changing the delay time
-    }
-
-  }
-
-}
-
 // Function to flash built-in LED
 void flashBuiltInLED(int num){
   for(int i = 0; i<= num; i++){
     digitalWrite(LED_BUILTIN, HIGH);  // turn the LED on (HIGH is the voltage level)
-    delay(250);                      // wait
+    delay(100);                      // wait
     digitalWrite(LED_BUILTIN, LOW);   // turn the LED off by making the voltage LOW
-    delay(250);
+    //delay(250);
   } 
 } 
 
@@ -133,15 +113,16 @@ void checkFile(File tempFile, int delayTime){
   while (!tempFile) {
     // if the file didn't open, print an error and stop
     digitalWrite(LED_BUILTIN, HIGH);  // turn the LED on (HIGH is the voltage level)
-    delay(delayTime*250);                      // wait 
+    delay(delayTime*50);                      // wait 
     digitalWrite(LED_BUILTIN, LOW);   // turn the LED off by making the voltage LOW
-    delay(250);
+    //delay(250);
 
-    if (millis() - startTime > (1+delayTime)*250) {
+    if (millis() - startTime > (1+delayTime)*50) {
       // Handle timeout here
-      //breathBuiltInLED(1);
+      // flashBuiltInLED(1);
       writeErrorToLog(String(tempFile.name()) + " did not open");
-      return;  // Exit the function
+      openFile(String(tempFile.name()),delayTime);
+      //return;  // Exit the function
     }
   }
 }
@@ -153,7 +134,7 @@ void readCSVFile(){
   File dataFile = SD.open("data.csv");
   
   if (!dataFile) {
-    breathBuiltInLED(2);
+    flashBuiltInLED(2);
     writeErrorToLog(String(dataFile.name()) + " is not open");
     return;
   }
@@ -180,6 +161,7 @@ void readCSVFile(){
     } else {
       // Append the character to valueStr
       valueStr += c;
+      delay(10);
     }
   }
   dataFile.close();
@@ -191,7 +173,7 @@ void openFile(String tempString, int tempCurrentFile){
   myFile.close();
   myFile = SD.open(tempString);
   checkFile(myFile,tempCurrentFile);
-  breathBuiltInLED(1);
+  flashBuiltInLED(1);
 }
 
 void loop()
@@ -202,52 +184,48 @@ void loop()
   int currentFile = 0;
 
   openFile(fileNames[currentFile], currentFile);
-  
+
   while(count == 0){
-    //check that the file is always available
-    checkFile(myFile,currentFile);
-    //increment current file ready to be played 
+    // Check that the file is always available
+    checkFile(myFile, currentFile);
+
+    // Increment current file ready to be played 
     if (digitalRead(buttonPin) == LOW){
+        digitalWrite(LEDPin1, HIGH);
+        
+        currentFile = (currentFile + 1) % (fileCount + 1);
+        openFile(fileNames[currentFile], currentFile);
 
-      digitalWrite(LEDPin1, HIGH);
-      if(currentFile < fileCount){
-        currentFile++;
-        openFile(fileNames[currentFile],currentFile);
-      }
-      digitalWrite(LEDPin1, LOW);
+        digitalWrite(LEDPin1, LOW);
     }
 
-    //decrement current file ready to be played 
+    // Decrement current file ready to be played 
     if (digitalRead(buttonPin1) == LOW){
+        digitalWrite(LEDPin1, HIGH);
+        
+        currentFile = (currentFile == 0) ? fileCount : (currentFile - 1);
+        openFile(fileNames[currentFile], currentFile);
 
-      digitalWrite(LEDPin1, HIGH);
-      if(currentFile > 0){
-        currentFile--;
-        openFile(fileNames[currentFile],currentFile);
-      }
-      digitalWrite(LEDPin1, LOW);
+        digitalWrite(LEDPin1, LOW);
     }
 
-    //Plays current file until file is finished playing
+    // Plays current file until file is finished playing
     if (digitalRead(buttonPin2) == LOW){
-      // until the file is not finished
-
-      // 44100kHz stereo => 88200 sample rate
-
-      AudioZero.begin(2*44100);
-      digitalWrite(LEDPin2, HIGH);
-      AudioZero.play(myFile);
-      AudioZero.end();
-      openFile(fileNames[currentFile],currentFile);
-      digitalWrite(LEDPin2, LOW);
+        // Until the file is not finished
+        AudioZero.begin(2 * 44100);
+        digitalWrite(LEDPin2, HIGH);
+        AudioZero.play(myFile);
+        AudioZero.end();
+        openFile(fileNames[currentFile], currentFile);
+        digitalWrite(LEDPin2, LOW);
     }
 
-    //state to proved indacation that program is active but cause no sound
+    // State to provide indication that program is active but causes no sound
     if (digitalRead(buttonPin2) != LOW){
-      // until the file is not finished
-      digitalWrite(LEDPin3, HIGH);
-      delay(50);
-      digitalWrite(LEDPin3, LOW);
+        // Until the file is not finished
+        digitalWrite(LEDPin3, HIGH);
+        delay(50);
+        digitalWrite(LEDPin3, LOW);
     }
   }
 }
