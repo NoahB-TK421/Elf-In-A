@@ -1,4 +1,4 @@
-# santaPhone
+# Elf-In-A
 a prop phone for Santa to talk to his elves
 
 Files on the SD card:
